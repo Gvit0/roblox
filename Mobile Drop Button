@@ -1,0 +1,90 @@
+local BUTTON_ANCHOR_POINT = Vector2.new(1,0) -- anchor point of button
+local BUTTON_POSITION = UDim2.new(1, -20, -0.3, 0) -- position of button
+local BUTTON_TITLE = "Drop" -- text that appears on the button
+local ACTION_NAME = "dropItem" -- name of the action
+local ACTION_DESCRIPTION = "Drops player's item" -- description of the action
+local BUTTON_IMAGE = ""
+
+-- Constants --
+local BEGIN = Enum.UserInputState.Begin
+
+-- Functionality --
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local Backpack = Player.Backpack
+local Character = script.Parent
+local CAS = game:GetService("ContextActionService")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+if not UIS.TouchEnabled then script:Destroy() return end
+
+function dropItem(_, inputState: Enum.UserInputState)
+	
+	if inputState ~= BEGIN then return end
+	
+	local droppedTools: {Tool} = {}
+	
+	for _, child in Character:GetChildren() do
+		if not child:IsA("Tool") then continue end
+		if child.CanBeDropped then
+			table.insert(droppedTools, child)
+		else
+			child.Parent = Backpack
+		end
+	end
+	
+	for _, tool in droppedTools do
+		tool.Parent = workspace
+	end
+	
+	toggle(false)
+	
+end
+
+-- Enables / disables action
+function toggle(newState: boolean)
+
+	if newState then
+
+		-- bind the action
+		CAS:BindAction(ACTION_NAME, dropItem, true)
+		
+		-- retrieve button and set positional info
+		local actionButton = CAS:GetButton(ACTION_NAME)
+		
+		-- might as well destroy the script if the plr is on pc lol
+		if not actionButton then script:Destroy() return end
+		
+		actionButton.AnchorPoint = BUTTON_ANCHOR_POINT
+		CAS:SetPosition(ACTION_NAME, BUTTON_POSITION)
+
+		-- set how button looks
+		CAS:SetTitle(ACTION_NAME, BUTTON_TITLE)
+		CAS:SetDescription(ACTION_NAME, ACTION_DESCRIPTION)
+		if BUTTON_IMAGE and BUTTON_IMAGE ~= "" then
+			CAS:SetImage(ACTION_NAME, BUTTON_IMAGE)
+		end
+
+	else
+
+		CAS:UnbindAction(ACTION_NAME)
+
+	end
+
+end
+
+Character.ChildAdded:Connect(function(child)
+	if child:IsA("Tool") then toggle(true) end
+end)
+
+Character.ChildRemoved:Connect(function(child)
+	if not Character:FindFirstChildOfClass("Tool") then
+		toggle(false)
+	end
+end)
+
+-- pcall to unbind the action to prevent multiple bindings
+pcall(function()
+	CAS:UnbindAction(ACTION_NAME)
+end)
